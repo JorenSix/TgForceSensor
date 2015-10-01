@@ -1,0 +1,80 @@
+h1. TgForce Impact Running Sensor Andoid API
+
+The TgForceSensor repository contains Android code to interface with the "TgForce Impact Running Sensor":http://tgforce.com/. The TgForce sensor is a Bluetooth LE device that measures "tibial shock":http://tgforce.com/about-tibial-shock/. It follows the
+Bluetooth LE standards and is relatively easy to interface with.
+
+This repository contains Android code to interface with the device. The protocol is encoded in the source code and is documented belowbelow.
+
+h2. TgForce  Impact Running Sensor Protocol
+
+The protocol consists of four standard Bluetooth "GATT":https://developer.bluetooth.org/gatt/Pages/default.aspx services and a custom service.
+
+The protocol below is documented as follows, with every @xxxxxx-xxxx-xxxx-xxxx-xxxxx@ representing a UUID:
+
+* @xxxxxx-xxxx-xxxx-xxxx-xxxxx@ Service name
+** @xxxxxx-xxxx-xxxx-xxxx-xxxxx@ Characteristic name
+*** @xxxxxx-xxxx-xxxx-xxxx-xxxxx@ Description name
+
+The BlueTooth 4.0 services the device exposes are:
+
+* @00001800-0000-1000-8000-00805f9b34fb@ "Generic Access service":https://developer.bluetooth.org/gatt/services/Pages/ServiceViewer.aspx?u=org.bluetooth.service.generic_access.xml
+** @00002a00-0000-1000-8000-00805f9b34fb@ "Device Name":https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.gap.device_name.xml
+** @00002a01-0000-1000-8000-00805f9b34fb@ "Appearance (device type)":https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.gap.appearance.xml
+** @00002a04-0000-1000-8000-00805f9b34fb@ "Peripheral Preferred Connection Parameters":https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.gap.peripheral_preferred_connection_parameters.xml
+* @00001801-0000-1000-8000-00805f9b34fb@ "Generic attribute service":https://developer.bluetooth.org/gatt/services/Pages/ServiceViewer.aspx?u=org.bluetooth.service.generic_attribute.xml
+** @00002a05-0000-1000-8000-00805f9b34fb@ "Service Changed":https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.gatt.service_changed.xml
+*** @00002902-0000-1000-8000-00805f9b34fb@ "Client Characteristic Configuration: notifications / indications":https://developer.bluetooth.org/gatt/descriptors/Pages/DescriptorViewer.aspx?u=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
+* @0000180a-0000-1000-8000-00805f9b34fb@ "Device Information":https://developer.bluetooth.org/gatt/services/Pages/ServiceViewer.aspx?u=org.bluetooth.service.device_information.xml
+** @00002a29-0000-1000-8000-00805f9b34fb@ Manufacturer Name String
+** @00002a24-0000-1000-8000-00805f9b34fb@ Model Number String
+** @00002a25-0000-1000-8000-00805f9b34fb@ Serial Number String
+** @00002a27-0000-1000-8000-00805f9b34fb@ Hardware Revision String
+** @00002a26-0000-1000-8000-00805f9b34fb@ Firmware Revision String
+** @00002a28-0000-1000-8000-00805f9b34fb@ Software Revision String
+* @0000180f-0000-1000-8000-00805f9b34fb@ Battery Service
+** @00002a19-0000-1000-8000-00805f9b34fb@ Battery Level (0-100)
+*** @00002902-0000-1000-8000-00805f9b34fb@ "Client Characteristic Configuration: notifications / indications":https://developer.bluetooth.org/gatt/descriptors/Pages/DescriptorViewer.aspx?u=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
+* @f6531000-9ce4-450d-b276-3b5a88fa2e73@ *TgForce Service*
+** @f6531010-9ce4-450d-b276-3b5a88fa2e73@ *PPA*
+*** @00002900-0000-1000-8000-00805f9b34fb@ "Characteristic Extended Properties":https://developer.bluetooth.org/gatt/descriptors/Pages/DescriptorViewer.aspx?u=org.bluetooth.descriptor.gatt.characteristic_extended_properties.xml
+*** @00002901-0000-1000-8000-00805f9b34fb@ "Characteristic User Description":https://developer.bluetooth.org/gatt/descriptors/Pages/DescriptorViewer.aspx?u=org.bluetooth.descriptor.gatt.characteristic_user_description.xml
+*** @00002902-0000-1000-8000-00805f9b34fb@ "Client Characteristic Configuration: notifications / indications":https://developer.bluetooth.org/gatt/descriptors/Pages/DescriptorViewer.aspx?u=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
+** @f6531011-9ce4-450d-b276-3b5a88fa2e73@ *gThreshold*
+*** @00002900-0000-1000-8000-00805f9b34fb@
+*** @00002901-0000-1000-8000-00805f9b34fb@
+** @f6531013-9ce4-450d-b276-3b5a88fa2e73@ *Delay*
+*** @00002900-0000-1000-8000-00805f9b34fb@
+*** @00002901-0000-1000-8000-00805f9b34fb@
+** @f6531014-9ce4-450d-b276-3b5a88fa2e73@ *Cadence*
+*** @00002900-0000-1000-8000-00805f9b34fb@
+*** @00002901-0000-1000-8000-00805f9b34fb@
+*** @00002902-0000-1000-8000-00805f9b34fb@
+
+The last service, the custom TgForce service, is of course the most interesting. It implements the main functionality of the device. To make sense of the data that is returned, some more information is needed about how to convert the returned numbers to values with meaningful units:
+
+* __PPA__: The PPA is the peak positive acceleration. It represents the size of the peak of downwards acceleration. The signal is sampled at 1600Hz and filtered using a low pass filter of 50Hz. The characteristic uses unsigned integers in the range of [0-255]. The to convert the values to g the following factor is needed: @23.9141g/254@, since 23.9g is the maximum acceleration.
+* __gThreshold__: The gThreshold is the minimum acceleration that needs to be exceeded before a peak is considered. It is represented using a value [0-85]. The default is 3.6g. To set the threshold multiply the value in g with 5.32, so the default value is 5.32*3.6g = 19.
+* __delay__: The delay instructs the device to discard superflous peaks for a certain period after a peak is detected. It is assumed that strides take a minimum amount of time: this is encoded as the delay. The default value is 550ms. It is represented using an integer from zero to 19999. To set the delay multiply the value in ms with 17.53. The default value is 550*17.53 = 9642.
+* __Cadence__: The cadence is given as a number of steps pre minute. No conversion is necessary.
+
+h2. Source Code Organization & Developing
+
+The source code is organized following the Android Studio project settings.
+
+
+h2. License and Credits
+
+This code was developed at University Ghent, IPEM by Joren Six. It is licensed under a BSD License.
+
+Thanks to "Kelsec Systems":http://kelsec.com/ for providing documentation and support via email.
+
+
+h2. Change Log
+
+01/10/2015 First version
+
+
+
+
+
+
