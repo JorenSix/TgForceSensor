@@ -1,6 +1,10 @@
 package be.ugent.ipem.tgforcesensor;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -26,6 +30,9 @@ public class TgForceActivity extends Activity implements TgForceEventHandler {
         textViewCadence = (TextView) findViewById(R.id.textViewCadence);
         textViewBattery = (TextView) findViewById(R.id.textViewBattery);
         textViewStatus = (TextView) findViewById(R.id.textViewStatus);
+
+        //if BT is not enabled, request to enable it
+        requestBluetoothAccess();
 
         sensor = new TgForceSensor(this.getApplicationContext(),this);
 
@@ -60,6 +67,16 @@ public class TgForceActivity extends Activity implements TgForceEventHandler {
         return super.onOptionsItemSelected(item);
     }
 
+
+    private static int REQUEST_ENABLE_BT = 56546;
+    private void requestBluetoothAccess(){
+        BluetoothManager btManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        BluetoothAdapter btAdapter = btManager.getAdapter();
+        if (btAdapter != null && !btAdapter.isEnabled()) {
+            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
+        }
+    }
 
 
     @Override
